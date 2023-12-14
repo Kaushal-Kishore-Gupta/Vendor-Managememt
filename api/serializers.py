@@ -7,6 +7,7 @@ class vendorSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
 class purchaseOrderSerializer(serializers.ModelSerializer):
     vendor=vendorSerializer()
     
@@ -17,10 +18,12 @@ class purchaseOrderSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         vendor_data = validated_data.pop('vendor')
-        vendor = Vendor.objects.get_or_create(**vendor_data)
+        vendor = Vendor.objects.get(**vendor_data)
         purchase_order = PurchaseOrder.objects.create(vendor=vendor, **validated_data)
         return purchase_order
     
+
+
 class historicalPerformanceSerializer(serializers.ModelSerializer):
     vendor=vendorSerializer()
     

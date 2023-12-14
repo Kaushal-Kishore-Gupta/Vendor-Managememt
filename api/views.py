@@ -16,10 +16,17 @@ class Vendors(APIView):
     def post(self,request):
         data=request.data
         serializer = vendorSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            HistoricalPerformance.objects.create(vendor=serializer.instance)
-            return Response(serializer.data,status=status.HTTP_201_CREATED)
+        if serializer.is_valid():   
+             serializer.save() 
+             HistoricalPerformance.objects.create(
+                vendor=serializer.instance,
+                date=datetime.now(),
+                on_time_delivery_rate=serializer.validated_data.get('on_time_delivery_rate'),
+                quality_rating_avg=serializer.validated_data.get('quality_rating_avg'),
+                average_response_time=serializer.validated_data.get('average_response_time'),
+                fulfillment_rate=serializer.validated_data.get('fulfillment_rate'),
+            )    
+             return Response(serializer.data,status=status.HTTP_201_CREATED)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
 class VendorDetailView(APIView):
@@ -39,6 +46,13 @@ class VendorDetailView(APIView):
         serializer = vendorSerializer(vendor,data=request.data)
         if serializer.is_valid():
             serializer.save()
+            HistoricalPerformance.objects.filter(vendor=vendor).update(
+                on_time_delivery_rate=serializer.validated_data.get('on_time_delivery_rate'),
+                quality_rating_avg=serializer.validated_data.get('quality_rating_avg'),
+                average_response_time=serializer.validated_data.get('average_response_time'),
+                fulfillment_rate=serializer.validated_data.get('fulfillment_rate'),
+                date=datetime.now(),
+            )
             return Response(serializer.data)
         return Response(serializer.errors,status=status.HTTP_400_BAD_REQUEST)
     
@@ -88,10 +102,11 @@ class PurchaseOrderDetailView(APIView):
             purchase_order.vendor.on_time_delivery_rate = new_on_time_delivery_rate
             purchase_order.vendor.save()
 
-            historical_performance, created = HistoricalPerformance.objects.get_or_create(vendor=purchase_order.vendor)
-            historical_performance.on_time_delivery_rate = new_on_time_delivery_rate
-            historical_performance.date = datetime.now()
-            historical_performance.save()
+            # historical_performance, created = HistoricalPerformance.objects.get_or_create(vendor=purchase_order.vendor)
+            # historical_performance.on_time_delivery_rate = new_on_time_delivery_rate
+            # historical_performance.date = datetime.now()
+            # historical_performance.save()
+            HistoricalPerformance.objects.filter(vendor=purchase_order.vendor).update(on_time_delivery_rate=new_on_time_delivery_rate, date=datetime.now())
 
     def calculate_quality_rating_avg(self, purchase_order, quality_rating):
         old_quality_rating_avg = purchase_order.vendor.quality_rating_avg
@@ -99,7 +114,7 @@ class PurchaseOrderDetailView(APIView):
         new_quality_rating_avg = (old_quality_rating_avg * total_ratings + quality_rating) / (total_ratings + 1)
         purchase_order.vendor.quality_rating_avg = new_quality_rating_avg
         purchase_order.vendor.save()
-        HistoricalPerformance.objects.filter(vendor=purchase_order.vendor).update(quality_rating_avg=new_quality_rating_avg)
+        HistoricalPerformance.objects.filter(vendor=purchase_order.vendor).update(quality_rating_avg=new_quality_rating_avg, date=datetime.now())
 
     
     def put(self, request, po_id):
